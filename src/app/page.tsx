@@ -307,7 +307,8 @@ export default async function HomePage() {
             今すぐ試聴できる、実際の講義動画
           </h2>
           <p className="mt-3 max-w-2xl text-sm text-ink-soft">
-            会員登録なしで、各動画の最初の 60 秒を試聴できます。
+            起業の科学・起業大全・ビジネスモデル解体新書ほか、
+            複数カテゴリから人気の講義を 3 分間試聴できます。
             続きは 10 日間無料トライアルで観られます。
           </p>
           {previewVideos.length > 0 ? (

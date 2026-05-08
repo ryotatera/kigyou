@@ -125,10 +125,11 @@ export async function fetchVideos(): Promise<DbVideo[]> {
   );
 }
 
-/** プレビュー用：人気上位＋YouTube 埋め込み可能なものに限定 */
+/** プレビュー用：複数カテゴリからミックス（カテゴリごとに最大 1-2 本） */
 export async function fetchPreviewVideos(limit = 6): Promise<DbVideo[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
+  // 多めに取得してカテゴリでバランス
   const { data, error } = await supabase
     .from("videos")
     .select(
@@ -138,8 +139,9 @@ export async function fetchPreviewVideos(limit = 6): Promise<DbVideo[]> {
     .is("deleted_at", null)
     .not("video_url", "is", null)
     .order("view_count", { ascending: false })
-    .limit(limit * 3);
+    .limit(80);
   if (error) return [];
+
   const all = (data ?? [])
     .map(
       (r): DbVideo => ({
@@ -162,7 +164,31 @@ export async function fetchPreviewVideos(limit = 6): Promise<DbVideo[]> {
       }),
     )
     .filter((v) => v.youtubeId);
-  return all.slice(0, limit);
+
+  // カテゴリ別に最大 MAX_PER_CAT 本を Round-robin で選択
+  const MAX_PER_CAT = 2;
+  const buckets = new Map<string, DbVideo[]>();
+  all.forEach((v) => {
+    const key = v.categoryId !== null ? String(v.categoryId) : "none";
+    if (!buckets.has(key)) buckets.set(key, []);
+    const bucket = buckets.get(key)!;
+    if (bucket.length < MAX_PER_CAT) bucket.push(v);
+  });
+
+  // Round-robin にカテゴリを跨いで取り出し
+  const out: DbVideo[] = [];
+  let progress = true;
+  while (out.length < limit && progress) {
+    progress = false;
+    for (const bucket of buckets.values()) {
+      if (out.length >= limit) break;
+      if (bucket.length > 0) {
+        out.push(bucket.shift()!);
+        progress = true;
+      }
+    }
+  }
+  return out;
 }
 
 export async function fetchCategories(): Promise<DbCategory[]> {

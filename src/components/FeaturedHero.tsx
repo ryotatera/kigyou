@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lock, Play, Bookmark, Users } from "lucide-react";
 import type { DbVideo } from "@/lib/db";
+import { PreviewEndedBanner } from "./VideoPreviewGrid";
 
 interface Props {
   video: DbVideo;
 }
 
-const PREVIEW_SECONDS = 60;
+const PREVIEW_SECONDS = 180; // 3 分
 
 /**
  * 注目の動画セクションのフックとして、実 YouTube 動画を埋め込む。
@@ -16,10 +17,25 @@ const PREVIEW_SECONDS = 60;
  */
 export function FeaturedHero({ video }: Props) {
   const [playing, setPlaying] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ytId = video.youtubeId;
   const thumb =
     video.thumbnailUrl ||
     (ytId ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg` : "");
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const startWatch = () => {
+    setPlaying(true);
+    setEnded(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setEnded(true), PREVIEW_SECONDS * 1000);
+  };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-editorial">
@@ -36,7 +52,7 @@ export function FeaturedHero({ video }: Props) {
             />
           ) : (
             <button
-              onClick={() => setPlaying(true)}
+              onClick={startWatch}
               className="group/btn absolute inset-0 flex items-center justify-center"
               aria-label={`${video.title} を再生`}
             >
@@ -58,7 +74,7 @@ export function FeaturedHero({ video }: Props) {
 
               {/* バッジ */}
               <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-ink">
-                無料で {PREVIEW_SECONDS} 秒試聴
+                無料で 3 分試聴
               </span>
               {video.duration ? (
                 <span className="absolute bottom-3 right-3 rounded bg-black/70 px-2 py-0.5 font-mono text-xs text-white">
@@ -67,6 +83,7 @@ export function FeaturedHero({ video }: Props) {
               ) : null}
             </button>
           )}
+          {ended ? <PreviewEndedBanner /> : null}
         </div>
 
         {/* 右側のテキスト */}
@@ -96,7 +113,7 @@ export function FeaturedHero({ video }: Props) {
               保存できます
             </span>
             <span className="ml-auto rounded-full bg-accent/10 px-2.5 py-1 text-accent">
-              最初の 60 秒は無料
+              最初の 3 分は無料
             </span>
           </div>
 
