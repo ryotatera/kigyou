@@ -1,6 +1,11 @@
-import { formatNumber } from "@/lib/format";
+import type { DbVideo } from "@/lib/db";
+import { VideoMockup } from "./benefits/VideoMockup";
 
-export function Benefits() {
+interface BenefitsProps {
+  featuredVideo?: DbVideo | null;
+}
+
+export function Benefits({ featuredVideo = null }: BenefitsProps = {}) {
   return (
     <section className="border-y border-line bg-white">
       <div className="mx-auto max-w-6xl px-6 py-20">
@@ -43,7 +48,7 @@ export function Benefits() {
               </>
             }
             body="動画で骨格を掴み、記事で具体事例を深掘りする。590 本以上の動画と 600 本以上の記事が相互にリンクされ、現場で使える判断軸が積み上がります。"
-            mockup={<VideoArticleMockup />}
+            mockup={<VideoMockup video={featuredVideo} />}
             mockupSide="left"
           />
           <BenefitRow
@@ -183,84 +188,6 @@ function RoadmapMockup() {
             </li>
           ))}
         </ol>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Mockup 2: Video + Related Articles ---------- */
-
-function VideoArticleMockup() {
-  return (
-    <div className="overflow-hidden">
-      <div className="flex items-center gap-1.5 border-b border-line bg-paper-warm px-4 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-        <span className="ml-3 font-mono text-[11px] text-ink-mute">
-          PMF とは何か — Product Market Fit の正体
-        </span>
-      </div>
-
-      <div className="p-4">
-        {/* Video frame */}
-        <div className="relative aspect-video overflow-hidden rounded-md bg-[#2A2A2A]">
-          <div className="absolute left-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-ink">
-            第 1 章まるごと公開
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-base text-black">
-              ▶
-            </span>
-          </div>
-          <div className="absolute inset-x-3 bottom-3">
-            <div className="relative h-1 rounded-full bg-white/15">
-              <span
-                className="absolute inset-y-0 left-0 rounded-full bg-accent/80"
-                style={{ width: "32%" }}
-              />
-              <span
-                className="absolute inset-y-0 left-0 rounded-full bg-white"
-                style={{ width: "12%" }}
-              />
-            </div>
-            <div className="mt-1 flex justify-between font-mono text-[10px] text-white/80">
-              <span>03:24 / 28:42</span>
-              <span>👥 {formatNumber(8231)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Related articles */}
-        <div className="mt-3">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-mute">
-            この動画に関連する記事
-          </p>
-          <ul className="grid grid-cols-2 gap-2">
-            <li className="rounded-md border border-line bg-paper-warm px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-accent">
-                考察
-              </p>
-              <p className="serif mt-0.5 line-clamp-2 text-[12px] font-semibold leading-snug text-ink">
-                PMF の正体は「言葉にならない引力」である
-              </p>
-              <p className="mt-1 font-mono text-[9px] text-ink-mute">
-                読了 8 分
-              </p>
-            </li>
-            <li className="rounded-md border border-line bg-paper-warm px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-accent">
-                観察
-              </p>
-              <p className="serif mt-0.5 line-clamp-2 text-[12px] font-semibold leading-snug text-ink">
-                CPF で陥る 3 つの罠
-              </p>
-              <p className="mt-1 font-mono text-[9px] text-ink-mute">
-                読了 6 分
-              </p>
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );

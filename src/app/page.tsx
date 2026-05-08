@@ -251,7 +251,7 @@ export default async function HomePage() {
       </section>
 
       {/* 4. Benefits — 3 つの仕組み */}
-      <Benefits />
+      <Benefits featuredVideo={previewVideos[0] ?? null} />
 
       {/* 5. Featured — 実 YouTube 動画フック */}
       <section className="border-y border-line bg-paper-warm">
