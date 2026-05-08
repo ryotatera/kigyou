@@ -15,6 +15,7 @@ export interface DbVideo {
   duration: number | null;
   thumbnailUrl: string | null;
   videoUrl: string | null;
+  youtubeId: string | null;
   tags: string[];
   viewCount: number;
   isFeatured: boolean;
@@ -23,6 +24,16 @@ export interface DbVideo {
   subcategory: string | null;
   categoryId: number | null;
   publishedAt: string | null;
+}
+
+/** YouTube URL から ID を抽出 */
+export function youtubeIdFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m =
+    url.match(/youtu\.be\/([\w-]{8,})/) ||
+    url.match(/youtube\.com\/watch\?v=([\w-]{8,})/) ||
+    url.match(/youtube\.com\/embed\/([\w-]{8,})/);
+  return m ? m[1] : null;
 }
 
 export interface DbCategory {
@@ -101,6 +112,7 @@ export async function fetchVideos(): Promise<DbVideo[]> {
       duration: r.duration,
       thumbnailUrl: r.custom_thumbnail_url ?? r.thumbnail_url,
       videoUrl: r.video_url,
+      youtubeId: youtubeIdFromUrl(r.video_url),
       tags: Array.isArray(r.tags) ? r.tags : [],
       viewCount: r.view_count ?? 0,
       isFeatured: !!r.is_featured,
@@ -111,6 +123,46 @@ export async function fetchVideos(): Promise<DbVideo[]> {
       publishedAt: r.published_at,
     }),
   );
+}
+
+/** プレビュー用：人気上位＋YouTube 埋め込み可能なものに限定 */
+export async function fetchPreviewVideos(limit = 6): Promise<DbVideo[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("videos")
+    .select(
+      "id, video_id, title, description, duration, thumbnail_url, custom_thumbnail_url, video_url, tags, view_count, is_featured, chapter, step, subcategory, category_id, published_at",
+    )
+    .eq("is_published", true)
+    .is("deleted_at", null)
+    .not("video_url", "is", null)
+    .order("view_count", { ascending: false })
+    .limit(limit * 3);
+  if (error) return [];
+  const all = (data ?? [])
+    .map(
+      (r): DbVideo => ({
+        id: r.id,
+        videoId: r.video_id,
+        title: r.title,
+        description: r.description,
+        duration: r.duration,
+        thumbnailUrl: r.custom_thumbnail_url ?? r.thumbnail_url,
+        videoUrl: r.video_url,
+        youtubeId: youtubeIdFromUrl(r.video_url),
+        tags: Array.isArray(r.tags) ? r.tags : [],
+        viewCount: r.view_count ?? 0,
+        isFeatured: !!r.is_featured,
+        chapter: r.chapter,
+        step: r.step,
+        subcategory: r.subcategory,
+        categoryId: r.category_id,
+        publishedAt: r.published_at,
+      }),
+    )
+    .filter((v) => v.youtubeId);
+  return all.slice(0, limit);
 }
 
 export async function fetchCategories(): Promise<DbCategory[]> {

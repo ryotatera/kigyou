@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { videos } from "@/lib/mockData";
+import { videos as mockVideos } from "@/lib/mockData";
 import { articles } from "@/lib/articles";
 import { categories } from "@/lib/categories";
 import { formatNumber, formatSeconds } from "@/lib/format";
@@ -13,6 +13,11 @@ import {
   IpoPreviewRows,
 } from "@/components/insights/PreviewRows";
 import { SignupLink } from "@/components/ExternalCTA";
+import { fetchPreviewVideos } from "@/lib/db";
+import { VideoPreviewGrid } from "@/components/VideoPreviewGrid";
+import { FeatureShowcase } from "@/components/FeatureShowcase";
+
+export const revalidate = 3600;
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -29,10 +34,15 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
-export default function HomePage() {
-  const featured = videos[0];
+export default async function HomePage() {
+  const previewVideos = await fetchPreviewVideos(6);
+  const featured = mockVideos[0];
   // ビジュアル重視のサムネ壁: モック動画を循環させて 12 タイル
-  const wall = Array.from({ length: 12 }, (_, i) => videos[i % videos.length]);
+  const wall = Array.from(
+    { length: 12 },
+    (_, i) => mockVideos[i % mockVideos.length],
+  );
+  const videos = mockVideos;
 
   return (
     <div>
@@ -290,46 +300,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. お試し動画 */}
-      <section id="trial" className="mx-auto max-w-6xl px-6 py-16 scroll-mt-20">
-        <p className="text-xs uppercase tracking-[0.25em] text-ink-mute">
-          Free Preview
-        </p>
-        <h2 className="serif mt-2 text-2xl font-semibold leading-tight text-ink sm:text-3xl">
-          今すぐ観られるお試し動画
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm text-ink-soft">
-          会員登録なしで、各動画の最初の 1 章まるごと または 90 秒のハイライトまで視聴できます。
-          続きは 10 日間無料で観られます。
-        </p>
-        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {videos.map((v) => (
-            <li key={v.id}>
-              <VideoCard video={v} size="compact" />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* 6. 学習を伴走する仕組み */}
-      <section className="border-y border-line bg-paper">
-        <div className="mx-auto max-w-6xl px-6 py-16">
+      {/* 5. お試し動画（実 DB 由来） */}
+      <section id="trial" className="border-y border-line bg-paper-warm">
+        <div className="mx-auto max-w-6xl px-6 py-20 scroll-mt-20">
           <p className="text-xs uppercase tracking-[0.25em] text-ink-mute">
-            Learning Support
+            Free Preview
           </p>
           <h2 className="serif mt-2 text-2xl font-semibold leading-tight text-ink sm:text-3xl">
-            学びを続けるための、6 つの機能
+            今すぐ試聴できる、実際の講義動画
           </h2>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Capability heading="チャプター" body="動画は章構造で公開。1 章ごとに完結します。" />
-            <Capability heading="続きから再生" body="どのデバイスでも続きから再生できます。" />
-            <Capability heading="しおり / メモ" body="動画の特定の秒数にメモを残せます。" />
-            <Capability heading="保存" body="あとで観たい動画をワンタップで保存。" />
-            <Capability heading="関連動画の推薦" body="観た動画に応じて、次に観るべき動画を提案。" />
-            <Capability heading="記事との往復" body="動画と関連する記事を相互にリンクします。" />
-          </ul>
+          <p className="mt-3 max-w-2xl text-sm text-ink-soft">
+            会員登録なしで、各動画の最初の 60 秒を試聴できます。
+            続きは 10 日間無料トライアルで観られます。
+          </p>
+          {previewVideos.length > 0 ? (
+            <div className="mt-10">
+              <VideoPreviewGrid videos={previewVideos} />
+            </div>
+          ) : (
+            <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {mockVideos.map((v) => (
+                <li key={v.id}>
+                  <VideoCard video={v} size="compact" />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
+
+      {/* 6. 機能ショーケース（モック画面付き） */}
+      <FeatureShowcase />
 
       {/* 7. 料金 */}
       <section className="mx-auto max-w-4xl px-6 py-16 text-center">
@@ -506,11 +507,3 @@ function Feature({ heading, body }: { heading: string; body: string }) {
   );
 }
 
-function Capability({ heading, body }: { heading: string; body: string }) {
-  return (
-    <div className="rounded-xl border border-line bg-white p-5 shadow-editorial">
-      <p className="serif text-base font-semibold text-ink">{heading}</p>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">{body}</p>
-    </div>
-  );
-}
