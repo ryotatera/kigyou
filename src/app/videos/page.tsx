@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, Lightbulb } from "lucide-react";
-import { videos } from "@/lib/mockData";
-import { categories } from "@/lib/categories";
+import { fetchCategories, fetchVideos } from "@/lib/db";
+import { videos as mockVideos } from "@/lib/mockData";
+import { categories as mockCategories } from "@/lib/categories";
 import { kigyouNoKagakuTotal } from "@/lib/curriculum";
+import { VideoListTable } from "@/components/VideoListTable";
 import { VideosBrowser } from "./VideosBrowser";
 
 export const metadata = {
@@ -11,10 +13,17 @@ export const metadata = {
     "起業の科学・起業大全を中心とした、起業家のための動画ライブラリ。",
 };
 
-export default function VideosIndex() {
-  const cats = ["すべて", ...categories.map((c) => c.name)];
+export const revalidate = 3600;
+
+export default async function VideosIndex() {
+  const [dbVideos, dbCategories] = await Promise.all([
+    fetchVideos(),
+    fetchCategories(),
+  ]);
+  const useLive = dbVideos.length > 0;
+
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-7xl px-6 py-10">
       <header className="mb-10">
         <p className="text-xs uppercase tracking-[0.25em] text-ink-mute">
           Videos
@@ -23,12 +32,13 @@ export default function VideosIndex() {
           動画ライブラリ
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-          起業の科学・起業大全の本編から、シリコンバレー取材・対談まで。
-          まずは無料で観られるイントロから始められます。
+          起業の科学・起業大全の本編から、シリコンバレー取材・対談まで
+          {useLive ? ` 全 ${dbVideos.length} 本` : ""}。
+          会員登録で全ての動画が視聴できます。
         </p>
       </header>
 
-      {/* 起業の科学カリキュラムへの大きな導線（動画ページの中に配置） */}
+      {/* 起業の科学カリキュラムへの大きな導線 */}
       <Link
         href="/videos/kigyou-no-kagaku"
         className="group mb-12 flex items-center gap-5 rounded-2xl border border-line bg-paper-warm p-5 shadow-editorial transition hover:border-accent/40 hover:shadow-lg sm:p-6"
@@ -54,7 +64,14 @@ export default function VideosIndex() {
         />
       </Link>
 
-      <VideosBrowser videos={videos} categories={cats} />
+      {useLive ? (
+        <VideoListTable videos={dbVideos} categories={dbCategories} />
+      ) : (
+        <VideosBrowser
+          videos={mockVideos}
+          categories={["すべて", ...mockCategories.map((c) => c.name)]}
+        />
+      )}
     </div>
   );
 }
