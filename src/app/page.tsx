@@ -13,10 +13,11 @@ import {
   IpoPreviewRows,
 } from "@/components/insights/PreviewRows";
 import { SignupLink } from "@/components/ExternalCTA";
-import { fetchPreviewVideos } from "@/lib/db";
+import { fetchPreviewVideos, fetchThumbnailWall } from "@/lib/db";
 import { VideoPreviewGrid } from "@/components/VideoPreviewGrid";
 import { FeatureShowcase } from "@/components/FeatureShowcase";
 import { FeaturedHero } from "@/components/FeaturedHero";
+import { ThumbnailWall } from "@/components/ThumbnailWall";
 
 export const revalidate = 3600;
 
@@ -36,7 +37,10 @@ const FAQ: { q: string; a: string }[] = [
 ];
 
 export default async function HomePage() {
-  const previewVideos = await fetchPreviewVideos(6);
+  const [previewVideos, wallItems] = await Promise.all([
+    fetchPreviewVideos(6),
+    fetchThumbnailWall(32),
+  ]);
   const featured = mockVideos[0];
   // ビジュアル重視のサムネ壁: モック動画を循環させて 12 タイル
   const wall = Array.from(
@@ -64,8 +68,8 @@ export default async function HomePage() {
             <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
               アイデアの検証から PMF 達成、その先のスケールまで。
               <br className="hidden sm:block" />
-              起業の科学・起業大全をはじめ <strong>590 本以上の動画</strong>と
-              <strong>600 本以上の記事</strong>で、毎日の意思決定に直結する知見を学べます。
+              起業の科学・起業大全をはじめ <strong>354 本の動画</strong>と
+              <strong>21 本の IPO レポート</strong>で、毎日の意思決定に直結する知見を学べます。
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <SignupLink className="rounded-md bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-accent-dark">
@@ -107,34 +111,38 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 2. サムネイルウォール */}
-      <section className="border-b border-line bg-ink py-14 text-paper">
+      {/* 2. サムネイルウォール（実サムネ ミックス） */}
+      <section className="border-b border-line bg-ink py-16 text-paper">
         <div className="mx-auto max-w-6xl px-6">
           <p className="mb-2 text-xs uppercase tracking-[0.25em] text-paper/60">
             Library
           </p>
           <h2 className="serif text-2xl font-semibold leading-tight sm:text-3xl">
-            590 本以上のアーカイブ動画
+            354 本の動画・21 本の IPO レポート・最新ニュース
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-paper/70">
-            起業の科学・起業大全・シリコンバレー先端情報・対談シリーズ。
-            毎週新しい動画と記事が追加されます。
+            起業の科学・起業大全・ビジネスモデル解体新書・シリコンバレー情報・対談シリーズ。
+            毎週、動画とレポートが追加されます。
           </p>
         </div>
-        <div className="mx-auto mt-8 max-w-6xl overflow-hidden px-6">
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
-            {wall.concat(wall).map((v, i) => (
-              <div
-                key={i}
-                className="aspect-video overflow-hidden rounded"
-                style={{
-                  background: v.posterColor,
-                  opacity: 0.6 + ((i % 5) * 0.08),
-                }}
-                aria-hidden
-              />
-            ))}
-          </div>
+        <div className="mx-auto mt-10 max-w-6xl overflow-hidden px-6">
+          {wallItems.length > 0 ? (
+            <ThumbnailWall items={wallItems} />
+          ) : (
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+              {wall.concat(wall).map((v, i) => (
+                <div
+                  key={i}
+                  className="aspect-video overflow-hidden rounded"
+                  style={{
+                    background: v.posterColor,
+                    opacity: 0.6 + ((i % 5) * 0.08),
+                  }}
+                  aria-hidden
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

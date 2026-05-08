@@ -125,6 +125,95 @@ export async function fetchVideos(): Promise<DbVideo[]> {
   );
 }
 
+/** サムネ壁用：軽量クエリ（URL のみ）。動画＋IPO＋ニュース記事をミックス */
+export interface ThumbItem {
+  kind: "video" | "ipo" | "ai";
+  url: string;
+  title: string;
+  href?: string;
+}
+
+export async function fetchThumbnailWall(count = 32): Promise<ThumbItem[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const [vidsRes, iposRes, aisRes] = await Promise.all([
+    supabase
+      .from("videos")
+      .select(
+        "video_id, title, thumbnail_url, custom_thumbnail_url, view_count",
+      )
+      .eq("is_published", true)
+      .is("deleted_at", null)
+      .or("custom_thumbnail_url.not.is.null,thumbnail_url.not.is.null")
+      .order("view_count", { ascending: false })
+      .limit(40),
+    supabase
+      .from("ipo_articles")
+      .select("slug, company_name, thumbnail_url")
+      .not("thumbnail_url", "is", null)
+      .order("listing_date", { ascending: false, nullsFirst: false })
+      .limit(20),
+    supabase
+      .from("ai_frontline_articles")
+      .select("slug, headline, thumbnail_url, hero_image_url")
+      .order("release_date", { ascending: false, nullsFirst: false })
+      .limit(10),
+  ]);
+
+  const vids: ThumbItem[] =
+    (vidsRes.data ?? [])
+      .map((r) => {
+        const url = r.custom_thumbnail_url ?? r.thumbnail_url;
+        if (!url) return null;
+        return {
+          kind: "video" as const,
+          url,
+          title: r.title,
+        } as ThumbItem;
+      })
+      .filter((x): x is ThumbItem => !!x) ?? [];
+
+  const ipos: ThumbItem[] =
+    (iposRes.data ?? [])
+      .filter((r) => r.thumbnail_url)
+      .map(
+        (r): ThumbItem => ({
+          kind: "ipo",
+          url: r.thumbnail_url as string,
+          title: r.company_name,
+          href: `/insights/ipo/${r.slug}`,
+        }),
+      ) ?? [];
+
+  const ais: ThumbItem[] =
+    (aisRes.data ?? [])
+      .map((r) => {
+        const url = r.thumbnail_url ?? r.hero_image_url;
+        if (!url) return null;
+        return {
+          kind: "ai" as const,
+          url,
+          title: r.headline,
+        } as ThumbItem;
+      })
+      .filter((x): x is ThumbItem => !!x) ?? [];
+
+  // インターリーブ：動画 4：IPO 1：AI 1 のリズムでミックス
+  const mixed: ThumbItem[] = [];
+  const vIter = [...vids];
+  const iIter = [...ipos];
+  const aIter = [...ais];
+  while (mixed.length < count && (vIter.length || iIter.length || aIter.length)) {
+    for (let i = 0; i < 4 && vIter.length && mixed.length < count; i++) {
+      mixed.push(vIter.shift()!);
+    }
+    if (iIter.length && mixed.length < count) mixed.push(iIter.shift()!);
+    if (aIter.length && mixed.length < count) mixed.push(aIter.shift()!);
+  }
+  return mixed.slice(0, count);
+}
+
 /** プレビュー用：複数カテゴリからミックス（カテゴリごとに最大 1-2 本） */
 export async function fetchPreviewVideos(limit = 6): Promise<DbVideo[]> {
   const supabase = getSupabase();
