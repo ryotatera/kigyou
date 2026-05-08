@@ -39,7 +39,7 @@ const FAQ: { q: string; a: string }[] = [
 export default async function HomePage() {
   const [previewVideos, wallItems] = await Promise.all([
     fetchPreviewVideos(6),
-    fetchThumbnailWall(32),
+    fetchThumbnailWall(48),
   ]);
   const featured = mockVideos[0];
   // ビジュアル重視のサムネ壁: モック動画を循環させて 12 タイル

@@ -50,3 +50,37 @@ body {
 .overlay-in {
   animation: overlayIn 280ms ease-out both;
 }
+
+/* Marquee（無限横スクロール）— 2 セット連結＋ -50% で完全シームレス */
+@keyframes marqueeLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes marqueeRight {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.marquee-left {
+  animation: marqueeLeft 80s linear infinite;
+}
+.marquee-right {
+  animation: marqueeRight 100s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-left,
+  .marquee-right {
+    animation: none;
+  }
+}
+.marquee-track:hover .marquee-left,
+.marquee-track:hover .marquee-right {
+  animation-play-state: paused;
+}
