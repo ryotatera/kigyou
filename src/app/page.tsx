@@ -16,6 +16,7 @@ import { SignupLink } from "@/components/ExternalCTA";
 import { fetchPreviewVideos } from "@/lib/db";
 import { VideoPreviewGrid } from "@/components/VideoPreviewGrid";
 import { FeatureShowcase } from "@/components/FeatureShowcase";
+import { FeaturedHero } from "@/components/FeaturedHero";
 
 export const revalidate = 3600;
 
@@ -244,7 +245,7 @@ export default async function HomePage() {
       {/* 4. Benefits — 3 つの仕組み */}
       <Benefits />
 
-      {/* 5. Featured + 最新 */}
+      {/* 5. Featured — 実 YouTube 動画フック */}
       <section className="border-y border-line bg-paper-warm">
         <div className="mx-auto max-w-6xl px-6 py-16">
           <div className="mb-6 flex items-baseline justify-between">
@@ -253,50 +254,46 @@ export default async function HomePage() {
               すべての動画 →
             </Link>
           </div>
-          <Link
-            href={`/videos/${featured.id}`}
-            className="block overflow-hidden rounded-xl border border-line bg-white shadow-editorial transition hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            <div className="grid sm:grid-cols-[1.4fr_1fr]">
-              <div
-                className="relative aspect-video sm:aspect-auto"
-                style={{ background: featured.posterColor }}
-              >
-                <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-ink">
-                  第 1 章まるごと公開
-                </span>
-                <span className="absolute bottom-3 right-3 rounded bg-black/70 px-1.5 py-0.5 font-mono text-xs text-white">
-                  {formatSeconds(featured.durationSeconds)}
-                </span>
-              </div>
-              <div className="p-6 sm:p-7">
-                <p className="text-[11px] uppercase tracking-wider text-ink-mute">
-                  {featured.category} · {featured.speaker}
-                </p>
-                <h3 className="serif mt-1 text-2xl font-semibold leading-snug text-ink">
-                  {featured.title}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-                  {featured.description}
-                </p>
-                <div className="mt-4 flex items-center gap-3 text-xs text-ink-mute">
-                  <span>👥 {formatNumber(featured.viewerCount)}</span>
-                  <span>💾 {formatNumber(featured.saveCount)}</span>
-                  <span className="ml-auto rounded-full bg-accent/10 px-2 py-1 text-accent">
-                    最初の {Math.round(featured.previewEndSeconds / 60)} 分は無料
+          {previewVideos.length > 0 ? (
+            <FeaturedHero video={previewVideos[0]} />
+          ) : (
+            <Link
+              href={`/videos/${featured.id}`}
+              className="block overflow-hidden rounded-xl border border-line bg-white shadow-editorial transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className="grid sm:grid-cols-[1.4fr_1fr]">
+                <div
+                  className="relative aspect-video sm:aspect-auto"
+                  style={{ background: featured.posterColor }}
+                >
+                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-ink">
+                    第 1 章まるごと公開
+                  </span>
+                  <span className="absolute bottom-3 right-3 rounded bg-black/70 px-1.5 py-0.5 font-mono text-xs text-white">
+                    {formatSeconds(featured.durationSeconds)}
                   </span>
                 </div>
+                <div className="p-6 sm:p-7">
+                  <p className="text-[11px] uppercase tracking-wider text-ink-mute">
+                    {featured.category} · {featured.speaker}
+                  </p>
+                  <h3 className="serif mt-1 text-2xl font-semibold leading-snug text-ink">
+                    {featured.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+                    {featured.description}
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 text-xs text-ink-mute">
+                    <span>{formatNumber(featured.viewerCount)} viewed</span>
+                    <span>{formatNumber(featured.saveCount)} saved</span>
+                    <span className="ml-auto rounded-full bg-accent/10 px-2 py-1 text-accent">
+                      最初の {Math.round(featured.previewEndSeconds / 60)} 分は無料
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Link>
-
-          <ul className="mt-6 grid gap-5 sm:grid-cols-3">
-            {videos.slice(1).map((v) => (
-              <li key={v.id}>
-                <VideoCard video={v} />
-              </li>
-            ))}
-          </ul>
+            </Link>
+          )}
         </div>
       </section>
 
