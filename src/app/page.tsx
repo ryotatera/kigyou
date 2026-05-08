@@ -2,7 +2,7 @@ import Link from "next/link";
 import { videos as mockVideos } from "@/lib/mockData";
 import { articles } from "@/lib/articles";
 import { categories } from "@/lib/categories";
-import { formatNumber, formatSeconds } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { VideoCard } from "@/components/VideoCard";
 import { Benefits } from "@/components/Benefits";
 import { newsItems } from "@/lib/insights";
@@ -16,8 +16,8 @@ import { SignupLink } from "@/components/ExternalCTA";
 import { fetchPreviewVideos, fetchThumbnailWall } from "@/lib/db";
 import { VideoPreviewGrid } from "@/components/VideoPreviewGrid";
 import { FeatureShowcase } from "@/components/FeatureShowcase";
-import { FeaturedHero } from "@/components/FeaturedHero";
 import { ThumbnailWall } from "@/components/ThumbnailWall";
+import { HeroVisual } from "@/components/HeroVisual";
 
 export const revalidate = 3600;
 
@@ -41,13 +41,11 @@ export default async function HomePage() {
     fetchPreviewVideos(6),
     fetchThumbnailWall(48),
   ]);
-  const featured = mockVideos[0];
-  // ビジュアル重視のサムネ壁: モック動画を循環させて 12 タイル
+  // ビジュアル重視のサムネ壁フォールバック: モック動画を循環させて 12 タイル
   const wall = Array.from(
     { length: 12 },
     (_, i) => mockVideos[i % mockVideos.length],
   );
-  const videos = mockVideos;
 
   return (
     <div>
@@ -87,27 +85,8 @@ export default async function HomePage() {
             </p>
           </div>
 
-          {/* ヒーロー右側：訴求ビジュアル（書籍を読む構図のプレースホルダ） */}
-          <div className="relative hidden sm:block">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1a] via-[#502952] to-[#2a2a2a] shadow-editorial">
-              <div className="absolute inset-0 grid grid-cols-3 gap-1 p-6 opacity-40">
-                {wall.slice(0, 9).map((v, i) => (
-                  <div
-                    key={i}
-                    className="rounded-md"
-                    style={{ background: v.posterColor }}
-                  />
-                ))}
-              </div>
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-6">
-                <p className="serif text-2xl font-semibold leading-tight text-white">
-                  起業の知見を、
-                  <br />
-                  毎日の意思決定に。
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* ヒーロー右側：FV ビジュアル（gpt-image-2 生成画像 / フォールバックでサムネモザイク） */}
+          <HeroVisual fallbackTiles={wall.slice(0, 9)} />
         </div>
       </section>
 
@@ -252,58 +231,6 @@ export default async function HomePage() {
 
       {/* 4. Benefits — 3 つの仕組み */}
       <Benefits featuredVideo={previewVideos[0] ?? null} />
-
-      {/* 5. Featured — 実 YouTube 動画フック */}
-      <section className="border-y border-line bg-paper-warm">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="mb-6 flex items-baseline justify-between">
-            <h2 className="serif text-2xl font-semibold text-ink">注目の動画</h2>
-            <Link href="/videos" className="text-xs text-accent hover:underline">
-              すべての動画 →
-            </Link>
-          </div>
-          {previewVideos.length > 0 ? (
-            <FeaturedHero video={previewVideos[0]} />
-          ) : (
-            <Link
-              href={`/videos/${featured.id}`}
-              className="block overflow-hidden rounded-xl border border-line bg-white shadow-editorial transition hover:-translate-y-0.5 hover:shadow-lg"
-            >
-              <div className="grid sm:grid-cols-[1.4fr_1fr]">
-                <div
-                  className="relative aspect-video sm:aspect-auto"
-                  style={{ background: featured.posterColor }}
-                >
-                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-ink">
-                    第 1 章まるごと公開
-                  </span>
-                  <span className="absolute bottom-3 right-3 rounded bg-black/70 px-1.5 py-0.5 font-mono text-xs text-white">
-                    {formatSeconds(featured.durationSeconds)}
-                  </span>
-                </div>
-                <div className="p-6 sm:p-7">
-                  <p className="text-[11px] uppercase tracking-wider text-ink-mute">
-                    {featured.category} · {featured.speaker}
-                  </p>
-                  <h3 className="serif mt-1 text-2xl font-semibold leading-snug text-ink">
-                    {featured.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-                    {featured.description}
-                  </p>
-                  <div className="mt-4 flex items-center gap-3 text-xs text-ink-mute">
-                    <span>{formatNumber(featured.viewerCount)} viewed</span>
-                    <span>{formatNumber(featured.saveCount)} saved</span>
-                    <span className="ml-auto rounded-full bg-accent/10 px-2 py-1 text-accent">
-                      最初の {Math.round(featured.previewEndSeconds / 60)} 分は無料
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )}
-        </div>
-      </section>
 
       {/* 5. お試し動画（実 DB 由来） */}
       <section id="trial" className="border-y border-line bg-paper-warm">
