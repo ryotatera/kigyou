@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="起業の科学 PORTAL">
+  <title>起業の科学 PORTAL</title>
+  <line x1="16" y1="7" x2="6" y2="25" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="7" x2="26" y2="25" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="6" y1="25" x2="26" y2="25" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16" cy="7" r="5" fill="#185FA5"/>
+  <circle cx="6" cy="25" r="5" fill="#1A1A1A"/>
+  <circle cx="26" cy="25" r="5" fill="#1A1A1A"/>
+</svg>
