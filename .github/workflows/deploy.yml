@@ -39,6 +39,9 @@ jobs:
           # User/Org Page (<user>.github.io) → 空のまま。
           # Project Page (<user>.github.io/<repo>) → base_path を自動取得。
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          # Supabase（GitHub → Settings → Secrets and variables → Actions に登録）
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Upload artifact

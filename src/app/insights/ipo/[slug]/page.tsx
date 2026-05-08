@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Lock, Star } from "lucide-react";
+import { fetchIpoArticleBySlug, fetchIpoArticles } from "@/lib/db";
 import { iposRecent } from "@/lib/insights-data";
 import { SignupLink } from "@/components/ExternalCTA";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const live = await fetchIpoArticles();
+  if (live.length > 0) {
+    return live.map((r) => ({ slug: r.slug }));
+  }
   return iposRecent.map((r) => ({ slug: r.slug }));
 }
 
@@ -14,13 +19,25 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const r = iposRecent.find((x) => x.slug === slug);
+  const r = await fetchIpoArticleBySlug(slug);
   if (!r) return {};
   return {
-    title: `${r.company} IPO レポート | 起業の科学ポータル`,
-    description: `上場 ${r.ipoDate}・主幹事 ${r.lead}・時価総額 ${r.mcapOku ? `${r.mcapOku}億円` : "—"}・売上成長率 ${r.growthPct ? `+${r.growthPct}%` : "—"}`,
+    title: `${r.companyName}（${r.ticker ?? "—"}）IPO レポート | 起業の科学ポータル`,
+    description: `${r.industry ?? ""} ${r.market ?? ""} 上場 ${r.listingDate ?? "—"}`,
     alternates: { canonical: `/insights/ipo/${r.slug}` },
   };
+}
+
+interface RatingAxis {
+  axis?: string;
+  score?: number;
+  comment?: string;
+}
+interface RatingBreakdown {
+  total?: number;
+  max?: number;
+  grade?: string;
+  axes?: RatingAxis[];
 }
 
 export default async function IpoDetail({
@@ -29,8 +46,15 @@ export default async function IpoDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const r = iposRecent.find((x) => x.slug === slug);
-  if (!r) notFound();
+  const r = await fetchIpoArticleBySlug(slug);
+  if (!r) {
+    // フォールバック：xlsx 由来の古いデータを表示するパスがある場合
+    const fallback = iposRecent.find((x) => x.slug === slug);
+    if (!fallback) notFound();
+    return <Fallback row={fallback} />;
+  }
+
+  const breakdown = (r.ratingBreakdown ?? null) as RatingBreakdown | null;
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
@@ -46,40 +70,102 @@ export default async function IpoDetail({
           <span className="rounded-full bg-white px-3 py-0.5 font-mono text-ink-soft">
             IPO レポート
           </span>
-          <span className="font-mono text-ink-mute">上場 {r.ipoDate}</span>
+          <span className="font-mono text-ink-mute">
+            上場 {r.listingDate ?? "—"}
+          </span>
         </div>
+
         <div className="px-8 py-10 sm:px-14 sm:py-12">
-          <h1 className="serif text-3xl font-semibold leading-tight text-ink sm:text-[44px]">
-            {r.company}
+          <div className="flex flex-wrap gap-2">
+            {r.industry ? (
+              <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-white">
+                {r.industry}
+              </span>
+            ) : null}
+            {r.market ? (
+              <span className="rounded-full border border-accent/40 bg-white px-2.5 py-1 text-[11px] font-semibold text-accent">
+                {r.market}
+              </span>
+            ) : null}
+          </div>
+
+          <h1 className="serif mt-6 text-3xl font-semibold leading-tight text-ink sm:text-[44px]">
+            {r.companyName}
           </h1>
-          <p className="mt-3 text-sm text-ink-mute">主幹事 {r.lead || "—"}</p>
+          {r.companyNameEn ? (
+            <p className="mt-2 text-sm text-ink-mute">{r.companyNameEn}</p>
+          ) : null}
+          <p className="mt-1 font-mono text-xs text-ink-mute">
+            ティッカー {r.ticker ?? "—"}
+          </p>
 
           <dl className="mt-10 grid grid-cols-2 gap-6 border-y border-line py-6 sm:grid-cols-4">
-            <KV label="上場日" value={r.ipoDate} />
+            <KV label="上場日" value={r.listingDate ?? "—"} />
+            <KV label="市場" value={r.market ?? "—"} />
             <KV
-              label="想定価格"
-              value={r.price ? `¥${r.price.toLocaleString()}` : "—"}
-              valueClass="font-mono"
-            />
-            <KV
-              label="時価総額"
-              value={r.mcapOku ? `${r.mcapOku.toFixed(1)}億円` : "—"}
-              valueClass="font-mono text-accent"
-            />
-            <KV
-              label="売上成長率"
-              value={r.growthPct !== null ? `+${r.growthPct.toFixed(1)}%` : "—"}
+              label="評価"
+              value={
+                r.ratingScore !== null ? `★ ${r.ratingScore.toFixed(1)}` : "—"
+              }
               valueClass={
-                r.growthPct !== null && r.growthPct >= 30
-                  ? "font-mono text-emerald-700"
-                  : "font-mono"
+                r.ratingScore !== null && r.ratingScore >= 4
+                  ? "text-accent"
+                  : ""
               }
             />
+            <KV
+              label="グレード"
+              value={breakdown?.grade ?? "—"}
+              valueClass="font-mono"
+            />
           </dl>
+
+          {/* 8 軸スコアブレイクダウン */}
+          {breakdown?.axes && breakdown.axes.length > 0 ? (
+            <div className="mt-10">
+              <p className="text-xs uppercase tracking-[0.25em] text-ink-mute">
+                Rating Breakdown
+              </p>
+              <h2 className="serif mt-2 text-xl font-semibold text-ink">
+                投資判断の 8 軸
+              </h2>
+              <ul className="mt-5 space-y-4">
+                {breakdown.axes.map((a, i) => (
+                  <li
+                    key={i}
+                    className="rounded-xl border border-line bg-white p-4"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="serif text-sm font-semibold text-ink">
+                        {a.axis ?? "—"}
+                      </p>
+                      <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-ink">
+                        <Star
+                          className="h-3 w-3 fill-current text-amber-500"
+                          aria-hidden
+                        />
+                        {a.score ?? "—"}/5
+                      </span>
+                    </div>
+                    {a.comment ? (
+                      <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
+                        {a.comment}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {breakdown.total !== undefined && breakdown.max !== undefined ? (
+                <p className="mt-4 text-right font-mono text-xs text-ink-mute">
+                  合計 {breakdown.total} / {breakdown.max}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </article>
 
-      <SignupGate />
+      <SignupGate totalChars={r.totalChars} />
     </div>
   );
 }
@@ -98,14 +184,20 @@ function KV({
       <dt className="text-[10px] uppercase tracking-wider text-ink-mute">
         {label}
       </dt>
-      <dd className={`serif mt-1 text-base font-semibold text-ink ${valueClass ?? ""}`}>
+      <dd
+        className={`serif mt-1 text-base font-semibold text-ink ${valueClass ?? ""}`}
+      >
         {value}
       </dd>
     </div>
   );
 }
 
-function SignupGate() {
+function SignupGate({ totalChars }: { totalChars: number | null }) {
+  const length =
+    totalChars && totalChars > 1000
+      ? `本文 約 ${Math.round(totalChars / 1000)}k 文字 / 図解付き`
+      : "本文 + 図解付き";
   return (
     <div className="mt-10 overflow-hidden rounded-2xl border border-accent bg-paper-warm shadow-editorial">
       <div className="flex flex-col items-center px-6 py-12 text-center sm:px-14 sm:py-16">
@@ -116,11 +208,11 @@ function SignupGate() {
           続きは無料登録で
         </p>
         <h3 className="serif mt-2 text-2xl font-semibold leading-tight text-ink sm:text-3xl">
-          深掘りレポート（10 セクション）を無料で読む
+          フルレポートを無料で読む
         </h3>
         <p className="mt-3 max-w-xl text-sm text-ink-soft sm:text-base">
-          会社概要・事業構造・成長戦略・財務・市場・競合・投資判断 3 本・参照情報。
-          10 日間 無料、クレジットカード不要。
+          {length}。事業構造・成長戦略・財務分析・市場・競合・投資判断まで網羅。
+          10 日間 無料、クレジットカード不要、いつでも解約可能。
         </p>
         <SignupLink className="mt-7 inline-flex items-center gap-2 rounded-md bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-dark">
           無料で続きを読む（10 日間 無料）
@@ -138,3 +230,28 @@ function SignupGate() {
     </div>
   );
 }
+
+function Fallback({ row }: { row: (typeof iposRecent)[number] }) {
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-10">
+      <Link
+        href="/insights/ipo"
+        className="mb-4 inline-flex items-center text-xs text-ink-mute hover:text-ink"
+      >
+        ← IPO 一覧
+      </Link>
+      <article className="rounded-2xl border border-line bg-paper-warm shadow-editorial">
+        <div className="px-8 py-10 sm:px-14 sm:py-12">
+          <h1 className="serif text-3xl font-semibold text-ink">
+            {row.company}
+          </h1>
+          <p className="mt-2 text-sm text-ink-mute">
+            上場 {row.ipoDate} · 主幹事 {row.lead}
+          </p>
+        </div>
+      </article>
+      <SignupGate totalChars={null} />
+    </div>
+  );
+}
+
